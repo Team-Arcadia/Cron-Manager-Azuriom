@@ -2,6 +2,22 @@
 
 All notable changes to the Cron Manager plugin for Azuriom will be documented in this file.
 
+---
+
+## [Unreleased] - 2026-04-18
+
+### Fixed
+
+- **Shop subscription expiration** — Force direct execution of `shop:subscriptions` and `shop:payments` commands every 10 minutes, in addition to `schedule:run`. This guarantees expired VIP roles are revoked even when `schedule:run` fails to trigger hourly commands properly through HTTP context.
+
+### Ajouts / Correctifs / Modifications / Performance
+
+### Correctifs
+
+- **Expiration des abonnements boutique** — Force l'exécution directe des commandes `shop:subscriptions` et `shop:payments` toutes les 10 minutes, en plus de `schedule:run`. Garantit la révocation des grades VIP expirés même quand `schedule:run` ne déclenche pas correctement les commandes horaires via HTTP.
+
+---
+
 ## [1.1.0] - 2026-01-26
 
 ### Added

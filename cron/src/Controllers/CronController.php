@@ -38,12 +38,14 @@ class CronController extends Controller
             Artisan::call('schedule:run');
             $output = Artisan::output();
 
+            $forcedOutput = $this->runForcedCommands();
+
             Setting::updateSettings('cron.last_executed_at', now()->toIso8601String());
 
             return response()->json([
                 'success' => true,
                 'message' => 'Cron tasks executed successfully.',
-                'output' => $output,
+                'output' => $output.$forcedOutput,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -51,6 +53,48 @@ class CronController extends Controller
                 'exception' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Force execution of critical commands that may be skipped by schedule:run
+     * when invoked via HTTP (e.g. shop subscription expiration).
+     *
+     * Throttled to avoid running on every minute call.
+     *
+     * @return string
+     */
+    protected function runForcedCommands(): string
+    {
+        $output = '';
+        $lastForced = setting('cron.last_forced_at');
+        $shouldForce = !$lastForced
+            || now()->diffInMinutes(\Illuminate\Support\Carbon::parse($lastForced)) >= 10;
+
+        if (!$shouldForce) {
+            return $output;
+        }
+
+        $commands = [
+            'shop:subscriptions',
+            'shop:payments',
+        ];
+
+        foreach ($commands as $command) {
+            try {
+                if (!array_key_exists($command, Artisan::all())) {
+                    continue;
+                }
+
+                Artisan::call($command);
+                $output .= "\n[forced:{$command}]\n".Artisan::output();
+            } catch (\Exception $e) {
+                $output .= "\n[forced:{$command}] failed: ".$e->getMessage();
+            }
+        }
+
+        Setting::updateSettings('cron.last_forced_at', now()->toIso8601String());
+
+        return $output;
     }
 
     /**
